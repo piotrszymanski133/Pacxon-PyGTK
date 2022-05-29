@@ -9,7 +9,7 @@ from gi.repository import GObject, GLib
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT, BLOCK_SIZE
 from dialog import Dialog
 from game import Game
-
+from ghost_type import GhostType
 
 class Window(Gtk.Window):
     def __init__(self):
@@ -30,7 +30,7 @@ class Window(Gtk.Window):
         self.connect("key_press_event", self.__on_key_pressed)
         self.connect("key_release_event", self.__on_key_release)
         self.connect("delete-event", Gtk.main_quit)
-
+        self.counter = 0
         self.show_start_screen()
         self.show_all()
 
@@ -47,15 +47,13 @@ class Window(Gtk.Window):
         if self.button is not None:
             self.__remove_start_screen()
         self.init_draw()
-        self.__show_characters()
         self.__create_score_label()
 
     def init_draw(self):
         self.drawing_area = Gtk.DrawingArea()
         self.drawing_area.set_size_request(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.drawing_area.connect("draw", self.draw_map)
-        self.drawing_area.queue_draw()
-        self.box.put(self.drawing_area, 0, 0)
+        self.box.put(self.drawing_area, 0, 20)
         self.show_all()
 
     def draw_map(self, wdg, context):
@@ -72,6 +70,19 @@ class Window(Gtk.Window):
                 elif block.type == BlockType.BREAKABLE_WALL:
                     context.set_source_rgb(0.0, 0.0, 1.0)
                 context.fill()
+        pacman = self.game.actual_level.pacman
+        context.set_source_rgb(1.0, 1.0, 0.0)
+        context.rectangle(pacman.x, pacman.y, BLOCK_SIZE, BLOCK_SIZE)
+        context.fill()
+        for ghost in self.game.actual_level.ghosts:
+            if ghost.type == GhostType.RED:
+                context.set_source_rgb(1.0, 0.0, 0.0)
+            elif ghost.type == GhostType.ORANGE:
+                context.set_source_rgb(1.0, 0.5, 0.0)
+            else:
+                context.set_source_rgb(0.5, 0.0, 0.5)
+            context.rectangle(ghost.x, ghost.y, BLOCK_SIZE, BLOCK_SIZE)
+            context.fill()
         self.__update_label(self.level_label, 'Poziom  ' + str(self.game.actual_level_number))
         self.__update_label(self.score_label, "Punkty: " + str(self.game.actual_level.map.filled_blocks_counter))
         self.__update_label(self.lives_label, "Zycia: " + str(self.game.actual_level.pacman.lives))
@@ -81,34 +92,29 @@ class Window(Gtk.Window):
         return True
 
     def __start_game(self, option):
-        self.__clean()
         if self.game is not None:
             self.restarted = True
 
         self.game = Game(self)
         self.show_game_screen()
         self.show_all()
-        GLib.timeout_add(2, self.__game_iteration)
-        loop = GLib.MainLoop()
-        loop.run()
+        GLib.timeout_add(5, self.__game_iteration)
 
     def __game_iteration(self):
+        self.counter += 1
         if self.restarted:
             self.restarted = False
             return False
         if self.game.level_changed:
             if self.game.actual_level_number > 3:
                 self.close()
-            self.box.remove(self.game.levels[self.game.previous_level - 1].pacman.picture)
-            for ghost in self.game.levels[self.game.previous_level - 1].ghosts:
-                self.box.remove(ghost.picture)
-            self.game.level_changed = False
-            self.__show_characters()
-        for ghost in self.game.actual_level.ghosts:
-            self.box.move(ghost.picture, ghost.x, ghost.y)
-        pacman = self.game.actual_level.pacman
-        self.box.move(pacman.picture, pacman.x, pacman.y)
         self.game.game_iteration()
+        if self.counter % 10 == 0:
+            self.drawing_area.queue_draw()
+        pacman = self.game.actual_level.pacman
+        self.drawing_area.queue_draw_area(pacman.x - 10, pacman.y - 10, 50, 50)
+        for ghost in self.game.actual_level.ghosts:
+            self.drawing_area.queue_draw_area(ghost.x - 10, ghost.y - 10, 50, 50)
         return True
 
     def __create_menu_bar(self):
@@ -157,19 +163,19 @@ class Window(Gtk.Window):
     def __create_score_label(self):
         self.level_label = Gtk.Label()
         self.level_label.set_text('Poziom  ' + str(self.game.actual_level_number))
-        self.box.put(self.level_label, 0, WINDOW_HEIGHT - 15)
+        self.box.put(self.level_label, 0, WINDOW_HEIGHT - 5)
 
         self.score_label = Gtk.Label()
         self.score_label.set_text("Punkty: " + str(self.game.score))
-        self.box.put(self.score_label, 130, WINDOW_HEIGHT - 15)
+        self.box.put(self.score_label, 130, WINDOW_HEIGHT - 5)
 
         self.level_score_label = Gtk.Label()
         self.level_score_label.set_text("Wynik: 0/80%")
-        self.box.put(self.level_score_label, 280, WINDOW_HEIGHT - 15)
+        self.box.put(self.level_score_label, 280, WINDOW_HEIGHT - 5)
 
         self.lives_label = Gtk.Label()
         self.lives_label.set_text("Zycia: " + str(self.game.actual_level.pacman.lives))
-        self.box.put(self.lives_label, 450, WINDOW_HEIGHT - 15)
+        self.box.put(self.lives_label, 450, WINDOW_HEIGHT - 5)
 
     def __update_label(self, label, text):
         label.set_text(text)
@@ -184,31 +190,16 @@ class Window(Gtk.Window):
         self.grid.remove(self.button)
         self.button = None
 
-    def __show_characters(self):
-        for ghost in self.game.actual_level.ghosts:
-            self.box.put(ghost.picture, ghost.x, ghost.y)
-
-        pacman = self.game.actual_level.pacman
-        self.box.put(pacman.picture, pacman.x, pacman.y)
-        self.show_all()
-
     def __remove_labels(self):
         self.box.remove(self.level_label)
         self.box.remove(self.lives_label)
         self.box.remove(self.level_score_label)
         self.box.remove(self.score_label)
 
-    def __clean(self):
-        if self.game is not None:
-            self.box.remove(self.game.actual_level.pacman.picture)
-            for ghost in self.game.actual_level.ghosts:
-                self.box.remove(ghost.picture)
-
     def __on_key_pressed(self, wdg, event):
         if self.game is not None and not self.game.actual_level.game_over:
             keyname = Gdk.keyval_name(event.keyval)
             pacman = self.game.actual_level.pacman
-            self.box.remove(pacman.picture)
             if keyname == "d":
                 pacman.start_move(0, 1)
             if keyname == "a":
@@ -217,8 +208,6 @@ class Window(Gtk.Window):
                 pacman.start_move(1, -1)
             if keyname == "s":
                 pacman.start_move(1, 1)
-            self.box.put(pacman.picture, pacman.x, pacman.y)
-            self.show_all()
 
     def __on_key_release(self, wdg, event):
         if self.game is not None:

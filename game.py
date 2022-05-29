@@ -14,7 +14,7 @@ class Game:
         self.actual_level_number = 1
 
     def game_iteration(self):
-        if self.actual_level.map.filled_blocks_counter / self.actual_level.map.blocks_number >= 0.8:
+        if self.actual_level.map.filled_blocks_counter / self.actual_level.map.blocks_number >= 0.1:
             self.actual_level.map.clean()
             self.actual_level.pacman.move_to(0, 25)
             self.level_changed = True

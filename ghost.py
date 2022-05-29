@@ -26,15 +26,6 @@ class Ghost:
         else:
             self.y_velocity = -2
 
-        if ghost_type == GhostType.PURPLE:
-            picture_path = 'static/purple-ghost.png'
-        elif ghost_type == GhostType.RED:
-            picture_path = 'static/red-ghost.png'
-        else:
-            picture_path = 'static/orange-ghost.png'
-
-        self.picture = Gtk.Image.new_from_file(picture_path)
-
     def move(self):
         self.x += self.x_velocity
         self.y += self.y_velocity

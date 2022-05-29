@@ -16,12 +16,6 @@ class Pacman:
         self.move_direction = 0
         self.lives = 3
 
-        self.picture_right = Gtk.Image.new_from_file('static/pacman-right.png')
-        self.picture_left = Gtk.Image.new_from_file('static/pacman-left.png')
-        self.picture_up = Gtk.Image.new_from_file('static/pacman-up.png')
-        self.picture_down = Gtk.Image.new_from_file('static/pacman-down.png')
-        self.picture = self.picture_right
-
     def move_iteration(self):
         if self.is_moving:
             self.last_x = self.x
@@ -72,17 +66,9 @@ class Pacman:
             self.is_moving = True
             self.move_direction = direction
             if direction == 0:
-                if step > 0:
-                    self.picture = self.picture_right
-                else:
-                    self.picture = self.picture_left
                 self.move_src = self.x
                 self.move_dst = self.x + 1000 * step
             else:
-                if step < 0:
-                    self.picture = self.picture_up
-                else:
-                    self.picture = self.picture_down
                 self.move_src = self.y
                 self.move_dst = self.y + 1000 * step
 
